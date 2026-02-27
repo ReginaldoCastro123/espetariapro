@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Smartphone, CreditCard, Copy } from 'lucide-react';
-import { subscriptionService } from '../services/subscriptionService'; // Ajuste o caminho do seu service
+// Altere a linha 3 do SubscriptionModal.tsx para:
+import { subscriptionService } from '../services/subscriptions'; // Ajuste o caminho do seu service
 
 export default function SubscriptionModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [step, setStep] = useState<'confirm' | 'method' | 'details' | 'success'>('confirm');
