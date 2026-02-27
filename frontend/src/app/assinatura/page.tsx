@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { subscriptionService, SubscriptionData } from '@/services/subscriptions';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import SubscriptionModal from '@/components/SubscriptionModal'; // <-- IMPORT DO SEU NOVO MODAL
 import {
   CreditCard,
   Check,
@@ -19,7 +20,7 @@ import {
 export default function SubscriptionPage() {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false); // Esse estado agora vai controlar o NOVO modal
   const { checkSubscription } = useSubscription();
 
   useEffect(() => {
@@ -37,17 +38,7 @@ export default function SubscriptionPage() {
     }
   }
 
-  async function handleUpgrade() {
-    try {
-      await subscriptionService.upgradeToEnterprise();
-      await checkSubscription();
-      loadSubscription();
-      setShowUpgradeModal(false);
-      alert('Assinatura Enterprise ativada com sucesso!');
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Erro ao fazer upgrade');
-    }
-  }
+  // Removi a função handleUpgrade() daqui porque o PIX vai cuidar de ativar o plano depois
 
   async function handleRenew() {
     try {
@@ -209,9 +200,7 @@ export default function SubscriptionPage() {
         {/* Plans Comparison */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Free Plan */}
-          <div
-            className={`card ${!isEnterprise ? 'border-fire-500/50' : ''}`}
-          >
+          <div className={`card ${!isEnterprise ? 'border-fire-500/50' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold">Free</h3>
               {!isEnterprise && (
@@ -254,9 +243,7 @@ export default function SubscriptionPage() {
           </div>
 
           {/* Enterprise Plan */}
-          <div
-            className={`card ${isEnterprise ? 'border-fire-500/50 bg-fire-500/5' : ''}`}
-          >
+          <div className={`card ${isEnterprise ? 'border-fire-500/50 bg-fire-500/5' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold">Enterprise</h3>
               {isEnterprise && (
@@ -296,81 +283,15 @@ export default function SubscriptionPage() {
                 Dados ilimitados
               </li>
             </ul>
-
-            {!isEnterprise && (
-              <button
-                onClick={() => setShowUpgradeModal(true)}
-                className="btn-primary w-full"
-              >
-                Fazer Upgrade
-              </button>
-            )}
           </div>
         </div>
 
-        {/* Upgrade Modal */}
-        {showUpgradeModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-            <div className="card w-full max-w-md animate-fadeIn">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold">Fazer Upgrade</h2>
-                <button
-                  onClick={() => setShowUpgradeModal(false)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-fire-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Flame size={32} className="text-white" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Plano Enterprise</h3>
-                <p className="text-3xl font-bold text-fire-500">
-                  R$ 39,90
-                  <span className="text-lg text-gray-400">/mês</span>
-                </p>
-              </div>
-
-              <div className="space-y-3 mb-6">
-                <div className="flex items-center gap-2 text-gray-300">
-                  <Check size={18} className="text-green-500" />
-                  Mesas ilimitadas
-                </div>
-                <div className="flex items-center gap-2 text-gray-300">
-                  <Check size={18} className="text-green-500" />
-                  Usuários ilimitados
-                </div>
-                <div className="flex items-center gap-2 text-gray-300">
-                  <Check size={18} className="text-green-500" />
-                  Histórico completo
-                </div>
-                <div className="flex items-center gap-2 text-gray-300">
-                  <Check size={18} className="text-green-500" />
-                  Dashboard avançado
-                </div>
-              </div>
-
-              <p className="text-sm text-gray-400 text-center mb-6">
-                Integração com gateway de pagamento em breve.
-                Por enquanto, o upgrade é simulado.
-              </p>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowUpgradeModal(false)}
-                  className="btn-secondary flex-1"
-                >
-                  Cancelar
-                </button>
-                <button onClick={handleUpgrade} className="btn-primary flex-1">
-                  Confirmar Upgrade
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* NOVO MODAL DE ASSINATURA QUE CRIAMOS */}
+        <SubscriptionModal 
+          isOpen={showUpgradeModal} 
+          onClose={() => setShowUpgradeModal(false)} 
+        />
+        
       </div>
     </ProtectedRoute>
   );
