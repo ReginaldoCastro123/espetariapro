@@ -100,3 +100,11 @@ export interface RegisterData {
   adminName: string;
   phone?: string;
 }
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'ADMIN' | 'WAITER';
+  active?: boolean; // Adicione esta linha aqui
+}
