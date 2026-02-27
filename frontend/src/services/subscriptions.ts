@@ -16,9 +16,22 @@ export interface SubscriptionData {
   price: number;
 }
 
+// Interface para os dados do PIX
+export interface PixSubscriptionData {
+  name: string;
+  whatsapp: string;
+  document: string; // CPF ou CNPJ
+}
+
 export const subscriptionService = {
   async get(): Promise<SubscriptionData> {
     const response = await api.get('/subscriptions');
+    return response.data;
+  },
+
+  // NOVO MÉTODO: Integração com o fluxo de pagamento PIX
+  async createPixSubscription(data: PixSubscriptionData): Promise<{ pixCode: string; qrCodeBase64: string }> {
+    const response = await api.post('/subscriptions/create-pix', data);
     return response.data;
   },
 
@@ -26,17 +39,8 @@ export const subscriptionService = {
     plan: 'FREE' | 'ENTERPRISE';
     status: string;
     limits: {
-      tables: {
-        current: number;
-        open: number;
-        max: number | null;
-        hasReachedLimit: boolean;
-      };
-      users: {
-        current: number;
-        max: number | null;
-        hasReachedLimit: boolean;
-      };
+      tables: { current: number; open: number; max: number | null; hasReachedLimit: boolean; };
+      users: { current: number; max: number | null; hasReachedLimit: boolean; };
     };
   }> {
     const response = await api.get('/subscriptions/limits');
