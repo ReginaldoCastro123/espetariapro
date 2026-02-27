@@ -49,16 +49,26 @@ export const getSubscription = async (req: AuthRequest, res: Response): Promise<
 export const createPix = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { name, whatsapp, document } = req.body;
+
+    if (!document || !name) {
+      res.status(400).json({ error: 'Nome e CPF/CNPJ são obrigatórios.' });
+      return;
+    }
+
     const payment = new Payment(client);
+    const cleanDocument = document.replace(/\D/g, '');
 
     const body = {
-      transaction_amount: 39.90, // Valor do plano Enterprise
+      transaction_amount: 39.90,
       description: 'Assinatura EspetariaPro Enterprise',
       payment_method_id: 'pix',
       payer: {
-        email: req.user!.email,
+        email: req.user?.email || 'cliente@exemplo.com',
         first_name: name,
-        identification: { type: 'CPF', number: document.replace(/\D/g, '') }
+        identification: { 
+          type: cleanDocument.length > 11 ? 'CNPJ' : 'CPF', 
+          number: cleanDocument 
+        }
       },
     };
 
@@ -68,8 +78,8 @@ export const createPix = async (req: AuthRequest, res: Response): Promise<void> 
       pixCode: result.point_of_interaction?.transaction_data?.qr_code,
       qrCodeBase64: result.point_of_interaction?.transaction_data?.qr_code_base64
     });
-  } catch (error) {
-    console.error('Erro ao gerar PIX:', error);
+  } catch (error: any) {
+    console.error('Erro ao gerar PIX:', JSON.stringify(error, null, 2));
     res.status(500).json({ error: 'Erro ao processar pagamento via PIX' });
   }
 };
