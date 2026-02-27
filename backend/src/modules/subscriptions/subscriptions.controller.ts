@@ -49,6 +49,7 @@ export const getSubscription = async (req: AuthRequest, res: Response): Promise<
 export const createPix = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { name, whatsapp, document } = req.body;
+    const companyId = req.user!.companyId;
 
     if (!document || !name) {
       res.status(400).json({ error: 'Nome e CPF/CNPJ são obrigatórios.' });
@@ -62,6 +63,7 @@ export const createPix = async (req: AuthRequest, res: Response): Promise<void> 
       transaction_amount: 0.01,
       description: 'Assinatura EspetariaPro Enterprise',
       payment_method_id: 'pix',
+      external_reference: companyId, // Identificador para o webhook
       payer: {
         email: req.user?.email || 'cliente@exemplo.com',
         first_name: name,
@@ -81,6 +83,43 @@ export const createPix = async (req: AuthRequest, res: Response): Promise<void> 
   } catch (error: any) {
     console.error('Erro ao gerar PIX:', JSON.stringify(error, null, 2));
     res.status(500).json({ error: 'Erro ao processar pagamento via PIX' });
+  }
+};
+
+// NOVO: Webhook para ativar o plano automaticamente
+export const handleWebhook = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { data, action } = req.body;
+
+    if (action === 'payment.updated' || action === 'payment.created') {
+      const paymentId = data.id;
+      const payment = new Payment(client);
+      const paymentDetails = await payment.get({ id: paymentId });
+
+      if (paymentDetails.status === 'approved') {
+        const companyId = paymentDetails.external_reference;
+        
+        if (companyId) {
+          const startDate = new Date();
+          const endDate = addMonths(startDate, 1);
+          
+          await prisma.subscription.create({
+            data: { 
+              companyId, 
+              plan: 'ENTERPRISE', 
+              status: 'ACTIVE', 
+              startDate, 
+              endDate 
+            },
+          });
+          console.log(`Assinatura ativada via Webhook para empresa: ${companyId}`);
+        }
+      }
+    }
+    res.status(200).send('Webhook processado');
+  } catch (error) {
+    console.error('Erro no Webhook:', error);
+    res.status(500).send('Erro interno');
   }
 };
 
