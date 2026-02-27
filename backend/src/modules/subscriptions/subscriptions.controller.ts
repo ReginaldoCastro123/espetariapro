@@ -2,17 +2,17 @@ import { Request, Response } from 'express';
 import prisma from '../../config/database';
 import { AuthRequest } from '../../middlewares/auth';
 import { env } from '../../config/env';
-import { addMonths, addDays } from 'date-fns';
+import { addMonths } from 'date-fns';
+import { Payment, MercadoPagoConfig } from 'mercadopago';
+
+// Configuração do cliente Mercado Pago
+const client = new MercadoPagoConfig({ accessToken: env.MP_ACCESS_TOKEN || '' });
 
 export const getSubscription = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const subscription = await prisma.subscription.findFirst({
-      where: {
-        companyId: req.user!.companyId,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      where: { companyId: req.user!.companyId },
+      orderBy: { createdAt: 'desc' },
     });
 
     if (!subscription) {
@@ -20,14 +20,9 @@ export const getSubscription = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
-    // Conta mesas e usuários
     const [tableCount, userCount] = await Promise.all([
-      prisma.table.count({
-        where: { companyId: req.user!.companyId },
-      }),
-      prisma.user.count({
-        where: { companyId: req.user!.companyId },
-      }),
+      prisma.table.count({ where: { companyId: req.user!.companyId } }),
+      prisma.user.count({ where: { companyId: req.user!.companyId } }),
     ]);
 
     const isExpired = subscription.status === 'EXPIRED' ||
@@ -51,11 +46,37 @@ export const getSubscription = async (req: AuthRequest, res: Response): Promise<
   }
 };
 
+export const createPix = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { name, whatsapp, document } = req.body;
+    const payment = new Payment(client);
+
+    const body = {
+      transaction_amount: 39.90, // Valor do plano Enterprise
+      description: 'Assinatura EspetariaPro Enterprise',
+      payment_method_id: 'pix',
+      payer: {
+        email: req.user!.email,
+        first_name: name,
+        identification: { type: 'CPF', number: document.replace(/\D/g, '') }
+      },
+    };
+
+    const result = await payment.create({ body });
+
+    res.json({
+      pixCode: result.point_of_interaction?.transaction_data?.qr_code,
+      qrCodeBase64: result.point_of_interaction?.transaction_data?.qr_code_base64
+    });
+  } catch (error) {
+    console.error('Erro ao gerar PIX:', error);
+    res.status(500).json({ error: 'Erro ao processar pagamento via PIX' });
+  }
+};
+
 export const upgradeToEnterprise = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const companyId = req.user!.companyId;
-
-    // Busca assinatura atual
     const currentSubscription = await prisma.subscription.findFirst({
       where: { companyId },
       orderBy: { createdAt: 'desc' },
@@ -66,26 +87,16 @@ export const upgradeToEnterprise = async (req: AuthRequest, res: Response): Prom
       return;
     }
 
-    // Cria nova assinatura Enterprise
     const startDate = new Date();
     const endDate = addMonths(startDate, 1);
 
     const subscription = await prisma.subscription.create({
-      data: {
-        companyId,
-        plan: 'ENTERPRISE',
-        status: 'ACTIVE',
-        startDate,
-        endDate,
-      },
+      data: { companyId, plan: 'ENTERPRISE', status: 'ACTIVE', startDate, endDate },
     });
 
     res.json({
       message: 'Assinatura Enterprise ativada com sucesso',
-      subscription: {
-        ...subscription,
-        price: env.ENTERPRISE_PRICE,
-      },
+      subscription: { ...subscription, price: env.ENTERPRISE_PRICE },
     });
   } catch (error) {
     console.error('Erro ao fazer upgrade:', error);
@@ -96,8 +107,6 @@ export const upgradeToEnterprise = async (req: AuthRequest, res: Response): Prom
 export const renewSubscription = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const companyId = req.user!.companyId;
-
-    // Busca assinatura atual
     const currentSubscription = await prisma.subscription.findFirst({
       where: { companyId },
       orderBy: { createdAt: 'desc' },
@@ -108,26 +117,16 @@ export const renewSubscription = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    // Renova por mais 1 mês a partir da data atual ou data de término
     const startDate = new Date();
     const endDate = addMonths(startDate, 1);
 
     const subscription = await prisma.subscription.create({
-      data: {
-        companyId,
-        plan: 'ENTERPRISE',
-        status: 'ACTIVE',
-        startDate,
-        endDate,
-      },
+      data: { companyId, plan: 'ENTERPRISE', status: 'ACTIVE', startDate, endDate },
     });
 
     res.json({
       message: 'Assinatura renovada com sucesso',
-      subscription: {
-        ...subscription,
-        price: env.ENTERPRISE_PRICE,
-      },
+      subscription: { ...subscription, price: env.ENTERPRISE_PRICE },
     });
   } catch (error) {
     console.error('Erro ao renovar assinatura:', error);
@@ -138,7 +137,6 @@ export const renewSubscription = async (req: AuthRequest, res: Response): Promis
 export const checkLimits = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const companyId = req.user!.companyId;
-
     const subscription = await prisma.subscription.findFirst({
       where: { companyId },
       orderBy: { createdAt: 'desc' },
@@ -169,41 +167,23 @@ export const checkLimits = async (req: AuthRequest, res: Response): Promise<void
       },
     };
 
-    res.json({
-      plan: subscription.plan,
-      status: subscription.status,
-      limits,
-    });
+    res.json({ plan: subscription.plan, status: subscription.status, limits });
   } catch (error) {
     console.error('Erro ao verificar limites:', error);
     res.status(500).json({ error: 'Erro ao verificar limites' });
   }
 };
 
-// Função para verificar e atualizar assinaturas expiradas (pode ser chamada por cron job)
 export const checkExpiredSubscriptions = async (): Promise<void> => {
   try {
     const now = new Date();
-
-    // Busca assinaturas trial expiradas
     const expiredTrials = await prisma.subscription.findMany({
-      where: {
-        status: 'TRIAL',
-        endDate: {
-          lt: now,
-        },
-      },
+      where: { status: 'TRIAL', endDate: { lt: now } },
     });
 
-    // Atualiza para expirado
     for (const sub of expiredTrials) {
-      await prisma.subscription.update({
-        where: { id: sub.id },
-        data: { status: 'EXPIRED' },
-      });
+      await prisma.subscription.update({ where: { id: sub.id }, data: { status: 'EXPIRED' } });
     }
-
-    console.log(`${expiredTrials.length} assinaturas trial expiradas atualizadas`);
   } catch (error) {
     console.error('Erro ao verificar assinaturas expiradas:', error);
   }
