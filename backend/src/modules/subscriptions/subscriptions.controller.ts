@@ -59,7 +59,7 @@ export const createPix = async (req: AuthRequest, res: Response): Promise<void> 
     const cleanDocument = document.replace(/\D/g, '');
 
     const body = {
-      transaction_amount: 39.90,
+      transaction_amount: 0.01,
       description: 'Assinatura EspetariaPro Enterprise',
       payment_method_id: 'pix',
       payer: {
