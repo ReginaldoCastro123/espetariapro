@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users         User[]
+  products      Product[]
+  tables        Table[]
+  orders        Order[]
+  subscriptions Subscription[]
+
+  @@map("companies")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  companyId String   @map("company_id")
+  name      String
+  email     String
+  password  String
+  role      UserRole @default(WAITER)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  orders  Order[]
+
+  @@unique([email, companyId])
+  @@map("users")
+}
+
+model Product {
+  id        String   @id @default(uuid())
+  companyId String   @map("company_id")
+  name      String
+  price     Decimal  @db.Decimal(10, 2)
+  category  String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@map("products")
+}
+
+model Table {
+  id          String     @id @default(uuid())
+  companyId   String     @map("company_id")
+  name        String
+  status      TableStatus @default(CLOSED)
+  totalAmount Decimal    @default(0) @map("total_amount") @db.Decimal(10, 2)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  orders  Order[]
+
+  @@map("tables")
+}
+
+model Order {
+  id            String        @id @default(uuid())
+  tableId       String        @map("table_id")
+  companyId     String        @map("company_id")
+  waiterId      String        @map("waiter_id")
+  status        OrderStatus   @default(OPEN)
+  paymentMethod PaymentMethod?
+  totalAmount   Decimal       @default(0) @map("total_amount") @db.Decimal(10, 2)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  closedAt      DateTime?     @map("closed_at")
+
+  table      Table       @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  waiter     User        @relation(fields: [waiterId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String  @map("order_id")
+  productId String  @map("product_id")
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2)
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("order_items")
+}
+
+model Subscription {
+  id        String            @id @default(uuid())
+  companyId String            @map("company_id")
+  plan      Plan              @default(FREE)
+  status    SubscriptionStatus @default(TRIAL)
+  startDate DateTime          @map("start_date")
+  endDate   DateTime?         @map("end_date")
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+enum UserRole {
+  ADMIN
+  WAITER
+}
+
+enum TableStatus {
+  OPEN
+  CLOSED
+}
+
+enum OrderStatus {
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CREDIT_CARD
+  DEBIT_CARD
+  PIX
+}
+
+enum Plan {
+  FREE
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  EXPIRED
+}
