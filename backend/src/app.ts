@@ -14,9 +14,23 @@ import integrationRoutes from './modules/integrations/integrations.routes';
 
 const app = express();
 
+// Lista de origens permitidas
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://espetariapro.vercel.app',
+  env.FRONTEND_URL // Mantemos a variável de ambiente como backup
+].filter(Boolean) as string[];
+
 // Middlewares
 app.use(cors({
-  origin: env.FRONTEND_URL,
+  origin: function (origin, callback) {
+    // !origin permite requisições de ferramentas (Postman/Insomnia)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 
