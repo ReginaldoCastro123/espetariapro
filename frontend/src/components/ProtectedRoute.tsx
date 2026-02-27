@@ -6,28 +6,33 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import Layout from './Layout';
 
-export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
+// Adicionamos a prop aqui
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  adminOnly?: boolean; 
+}
+
+export default function ProtectedRoute({ children, adminOnly = false }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading } = useAuth();
-  const { isExpired } = useSubscription(); // Capturamos o estado de expiração
+  const { isExpired } = useSubscription();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    // 1. Se ainda está carregando, não faz nada
     if (isLoading) return;
 
-    // 2. Se não está logado, manda pro login
     if (!isAuthenticated) {
       router.replace('/login');
       return;
     }
 
-    // 3. SE A ASSINATURA EXPIROU e o usuário NÃO está na página de assinatura:
-    // Bloqueia e manda pra lá!
+    // Se a rota exige admin (adminOnly=true) e o user não for admin, bloqueia
+    // (Você precisaria integrar isso com seu AuthContext)
+    
     if (isExpired && pathname !== '/assinatura') {
       router.replace('/assinatura');
     }
-  }, [isLoading, isAuthenticated, isExpired, pathname, router]);
+  }, [isLoading, isAuthenticated, isExpired, pathname, router, adminOnly]);
 
   if (isLoading) {
     return (
@@ -38,9 +43,6 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   }
 
   if (!isAuthenticated) return null;
-
-  // Se a assinatura estiver expirada, não renderiza o conteúdo da página, 
-  // apenas o layout (para ele ver o botão de renovar no menu ou topo)
   if (isExpired && pathname !== '/assinatura') return null;
 
   return <Layout>{children}</Layout>;
