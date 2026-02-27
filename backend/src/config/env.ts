@@ -13,4 +13,5 @@ export const env = {
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000',
   FREE_TRIAL_DAYS: parseInt(process.env.FREE_TRIAL_DAYS || '15'),
   ENTERPRISE_PRICE: parseFloat(process.env.ENTERPRISE_PRICE || '39.90'),
+  MP_ACCESS_TOKEN: process.env.MP_ACCESS_TOKEN,
 };
