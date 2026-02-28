@@ -1,4 +1,4 @@
-'use client';
+'use function';
 
 import React, { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -19,16 +19,22 @@ export default function ProtectedRoute({ children, adminOnly = false }: Protecte
   const pathname = usePathname();
 
   useEffect(() => {
+    // Se ainda estiver carregando, não faz nada
     if (isLoading) return;
 
+    // A MÁGICA CONTRA O TILT ESTÁ AQUI:
+    // Só redireciona se não estiver autenticado E se a página atual não for o /login
     if (!isAuthenticated) {
-      router.replace('/login');
+      if (pathname !== '/login') {
+        router.replace('/login');
+      }
       return;
     }
 
     // Se a rota exige admin (adminOnly=true) e o user não for admin, bloqueia
     // (Você precisaria integrar isso com seu AuthContext)
     
+    // Se a assinatura expirou e ele não está na tela de assinatura, redireciona
     if (isExpired && pathname !== '/assinatura') {
       router.replace('/assinatura');
     }
@@ -42,6 +48,7 @@ export default function ProtectedRoute({ children, adminOnly = false }: Protecte
     );
   }
 
+  // Previne renderizar o conteúdo protegido se não estiver autenticado
   if (!isAuthenticated) return null;
   if (isExpired && pathname !== '/assinatura') return null;
 
