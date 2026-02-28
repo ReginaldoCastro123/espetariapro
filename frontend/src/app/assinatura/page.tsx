@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { subscriptionService, SubscriptionData } from '@/services/subscriptions';
-import { useSubscription } from '@/contexts/SubscriptionContext';
+// import { useSubscription } from '@/contexts/SubscriptionContext'; <-- Mantido caso você precise depois
 import SubscriptionModal from '@/components/SubscriptionModal';
 import {
   CreditCard,
@@ -21,7 +21,6 @@ export default function SubscriptionPage() {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const { checkSubscription } = useSubscription();
 
   useEffect(() => {
     loadSubscription();
@@ -35,17 +34,6 @@ export default function SubscriptionPage() {
       console.error('Erro ao carregar assinatura:', error);
     } finally {
       setIsLoading(false);
-    }
-  }
-
-  async function handleRenew() {
-    try {
-      await subscriptionService.renew();
-      await checkSubscription();
-      loadSubscription();
-      alert('Assinatura renovada com sucesso!');
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Erro ao renovar assinatura');
     }
   }
 
@@ -68,18 +56,18 @@ export default function SubscriptionPage() {
   const isTrial = subscription?.status === 'TRIAL';
   const isEnterprise = subscription?.plan === 'ENTERPRISE';
 
-  // NOVO: Cálculo de quantos dias faltam para a assinatura vencer
+  // Cálculo de quantos dias faltam para a assinatura vencer
   const daysUntilExpiration = subscription?.endDate
     ? Math.ceil((new Date(subscription.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
     : null;
 
-  // NOVO: Só é considerado perto de expirar se faltar 5 dias ou menos
+  // Só é considerado perto de expirar se faltar 5 dias ou menos
   const isCloseToExpiring = daysUntilExpiration !== null && daysUntilExpiration <= 5;
 
   return (
     <ProtectedRoute adminOnly>
       <div className="space-y-6">
-        {/* Expired Alert */}
+        {/* Aviso de Assinatura Expirada */}
         {isExpired && (
           <div className="bg-wine-500/20 border border-wine-500 rounded-xl p-6 flex items-center gap-4">
             <div className="w-12 h-12 bg-wine-500 rounded-full flex items-center justify-center">
@@ -91,14 +79,15 @@ export default function SubscriptionPage() {
                 Sua assinatura expirou. Renove agora para continuar usando todas as funcionalidades.
               </p>
             </div>
-            <button onClick={handleRenew} className="btn-primary">
+            {/* NOVO: Abre o Modal de Pagamento em vez de dar grátis */}
+            <button onClick={() => setShowUpgradeModal(true)} className="btn-primary">
               Renovar Agora
               <ArrowRight size={18} />
             </button>
           </div>
         )}
 
-        {/* Current Plan */}
+        {/* Card do Plano Atual */}
         <div className="card">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
@@ -136,7 +125,7 @@ export default function SubscriptionPage() {
                 <p className="text-xl font-semibold">
                   {formatDate(subscription.endDate)}
                 </p>
-                {/* Opcional: Mostra um aviso pequeno se estiver quase vencendo */}
+                {/* Mostra um aviso pequeno se estiver quase vencendo */}
                 {isCloseToExpiring && !isExpired && (
                   <p className="text-sm text-fire-500 mt-1">Vence em {daysUntilExpiration} dias</p>
                 )}
@@ -144,7 +133,7 @@ export default function SubscriptionPage() {
             )}
           </div>
 
-          {/* Usage Stats */}
+          {/* Estatísticas de Uso */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="p-4 bg-dark-700 rounded-lg flex items-center gap-4">
               <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
@@ -181,7 +170,7 @@ export default function SubscriptionPage() {
             </div>
           </div>
 
-          {/* Actions */}
+          {/* Ações / Botões */}
           {!isEnterprise && (
             <button
               onClick={() => setShowUpgradeModal(true)}
@@ -193,17 +182,18 @@ export default function SubscriptionPage() {
           )}
 
           {/* NOVO: O botão de renovar agora SÓ aparece se estiver vencido ou faltando <= 5 dias */}
+          {/* NOVO: Abre o Modal de Pagamento em vez de dar grátis */}
           {isEnterprise && (isExpired || isCloseToExpiring) && (
-            <button onClick={handleRenew} className="btn-secondary w-full">
+            <button onClick={() => setShowUpgradeModal(true)} className="btn-secondary w-full">
               <Calendar size={18} />
               Renovar Assinatura
             </button>
           )}
         </div>
 
-        {/* Plans Comparison */}
+        {/* Comparação de Planos */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Free Plan */}
+          {/* Plano Free */}
           <div className={`card ${!isEnterprise ? 'border-fire-500/50' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold">Free</h3>
@@ -246,7 +236,7 @@ export default function SubscriptionPage() {
             </ul>
           </div>
 
-          {/* Enterprise Plan */}
+          {/* Plano Enterprise */}
           <div className={`card ${isEnterprise ? 'border-fire-500/50 bg-fire-500/5' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold">Enterprise</h3>
@@ -290,6 +280,7 @@ export default function SubscriptionPage() {
           </div>
         </div>
 
+        {/* Modal que vai exibir o QRCode do PIX quando alguém clicar em "Fazer Upgrade" ou "Renovar" */}
         <SubscriptionModal 
           isOpen={showUpgradeModal} 
           onClose={() => setShowUpgradeModal(false)} 
