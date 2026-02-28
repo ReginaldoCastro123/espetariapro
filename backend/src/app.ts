@@ -54,6 +54,7 @@ app.use('/api/tables', tableRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
+console.log("Rotas de subscrição montadas em /api/subscriptions");
 app.use('/api/integrations', integrationRoutes);
 
 // Error handler
