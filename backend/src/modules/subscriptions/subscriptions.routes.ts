@@ -4,24 +4,27 @@ import {
   upgradeToEnterprise, 
   renewSubscription, 
   checkLimits, 
-  createPix // Importando a nova função
+  createPix,
+  handleWebhook // Importando a nova função do webhook
 } from './subscriptions.controller';
 import { authMiddleware } from '../../middlewares/auth';
 import { requireAdmin } from '../../middlewares/roles';
 
 const router = Router();
 
-// Todas as rotas precisam de autenticação
+// ROTA PÚBLICA: Deve vir ANTES do authMiddleware
+// O Mercado Pago chamará esta URL sem enviar token de usuário
+router.post('/webhook', handleWebhook);
+
+// Todas as rotas ABAIXO desta linha precisam de autenticação
 router.use(authMiddleware);
 
-// Rotas
+// Rotas protegidas por autenticação
 router.get('/', getSubscription);
 router.get('/limits', checkLimits);
-
-// Nova rota para gerar o PIX
 router.post('/create-pix', createPix);
 
-// Rotas protegidas para admins
+// Rotas protegidas por autenticação E nível de administrador
 router.post('/upgrade', requireAdmin, upgradeToEnterprise);
 router.post('/renew', requireAdmin, renewSubscription);
 
