@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { X, Smartphone, CreditCard, Copy } from 'lucide-react';
-// Altere a linha 3 do SubscriptionModal.tsx para:
-import { subscriptionService } from '../services/subscriptions'; // Ajuste o caminho do seu service
+import { subscriptionService } from '../services/subscriptions';
 
 export default function SubscriptionModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [step, setStep] = useState<'confirm' | 'method' | 'details' | 'success'>('confirm');
@@ -11,10 +10,56 @@ export default function SubscriptionModal({ isOpen, onClose }: { isOpen: boolean
 
   if (!isOpen) return null;
 
+  // --- FUNÇÕES DE MÁSCARA (FORMATAÇÃO AUTOMÁTICA) ---
+  const formatPhone = (value: string) => {
+    let v = value.replace(/\D/g, ''); // Remove tudo que não é número
+    if (v.length <= 10) {
+      v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
+      v = v.replace(/(\d{4})(\d)/, '$1-$2');
+    } else {
+      v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
+      v = v.replace(/(\d{5})(\d)/, '$1-$2');
+    }
+    return v.substring(0, 15); // Limita ao tamanho máximo de (99) 99999-9999
+  };
+
+  const formatDocument = (value: string) => {
+    let v = value.replace(/\D/g, ''); // Remove tudo que não é número
+    if (v.length <= 11) {
+      // Máscara de CPF: 000.000.000-00
+      v = v.replace(/(\d{3})(\d)/, '$1.$2');
+      v = v.replace(/(\d{3})(\d)/, '$1.$2');
+      v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    } else {
+      // Máscara de CNPJ: 00.000.000/0000-00
+      v = v.replace(/^(\d{2})(\d)/, '$1.$2');
+      v = v.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+      v = v.replace(/\.(\d{3})(\d)/, '.$1/$2');
+      v = v.replace(/(\d{4})(\d)/, '$1-$2');
+    }
+    return v.substring(0, 18); // Limita ao tamanho máximo de CNPJ
+  };
+
+  // --- HANDLERS PARA ATUALIZAR O ESTADO COM A MÁSCARA ---
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, whatsapp: formatPhone(e.target.value) });
+  };
+
+  const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, document: formatDocument(e.target.value) });
+  };
+
   const handleGeneratePix = async () => {
     setLoading(true);
     try {
-      const data = await subscriptionService.createPixSubscription(formData);
+      // Remove a formatação antes de enviar para a API (opcional, mas recomendado)
+      const cleanData = {
+        ...formData,
+        whatsapp: formData.whatsapp.replace(/\D/g, ''),
+        document: formData.document.replace(/\D/g, '')
+      };
+      
+      const data = await subscriptionService.createPixSubscription(cleanData);
       setPixData(data);
       setStep('success');
     } catch (error) {
@@ -56,10 +101,31 @@ export default function SubscriptionModal({ isOpen, onClose }: { isOpen: boolean
         {step === 'details' && (
           <div className="space-y-4">
             <h2 className="text-lg font-bold text-white">Dados do Assinante</h2>
-            <input onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Nome completo" className="w-full bg-dark-800 border-dark-700 rounded-lg p-3 text-white" />
-            <input onChange={(e) => setFormData({...formData, whatsapp: e.target.value})} placeholder="WhatsApp" className="w-full bg-dark-800 border-dark-700 rounded-lg p-3 text-white" />
-            <input onChange={(e) => setFormData({...formData, document: e.target.value})} placeholder="CPF/CNPJ" className="w-full bg-dark-800 border-dark-700 rounded-lg p-3 text-white" />
-            <button onClick={handleGeneratePix} disabled={loading} className="w-full bg-fire-500 text-white py-3 rounded-lg font-semibold">
+            
+            <input 
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})} 
+              placeholder="Nome completo" 
+              className="w-full bg-dark-800 border-dark-700 rounded-lg p-3 text-white focus:outline-none focus:border-fire-500 transition-colors" 
+            />
+            
+            <input 
+              value={formData.whatsapp}
+              onChange={handlePhoneChange} 
+              placeholder="WhatsApp (ex: (11) 99999-9999)" 
+              maxLength={15}
+              className="w-full bg-dark-800 border-dark-700 rounded-lg p-3 text-white focus:outline-none focus:border-fire-500 transition-colors" 
+            />
+            
+            <input 
+              value={formData.document}
+              onChange={handleDocumentChange} 
+              placeholder="CPF ou CNPJ" 
+              maxLength={18}
+              className="w-full bg-dark-800 border-dark-700 rounded-lg p-3 text-white focus:outline-none focus:border-fire-500 transition-colors" 
+            />
+            
+            <button onClick={handleGeneratePix} disabled={loading || !formData.name || !formData.whatsapp || !formData.document} className="w-full bg-fire-500 text-white py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-opacity">
               {loading ? "Gerando..." : "Gerar QR Code PIX"}
             </button>
           </div>

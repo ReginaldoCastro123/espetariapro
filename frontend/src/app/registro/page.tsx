@@ -20,11 +20,34 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false);
   const { register } = useAuth();
 
+  // --- FUNÇÃO DE MÁSCARA PARA TELEFONE ---
+  const formatPhone = (value: string) => {
+    let v = value.replace(/\D/g, ''); // Remove tudo que não é número
+    if (v.length <= 10) {
+      v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
+      v = v.replace(/(\d{4})(\d)/, '$1-$2');
+    } else {
+      v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
+      v = v.replace(/(\d{5})(\d)/, '$1-$2');
+    }
+    return v.substring(0, 15); // Limita ao tamanho máximo de (99) 99999-9999
+  };
+
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    
+    // Se o campo for o telefone, aplica a máscara antes de salvar
+    if (name === 'phone') {
+      setFormData({
+        ...formData,
+        [name]: formatPhone(value),
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -49,7 +72,8 @@ export default function RegisterPage() {
         email: formData.email,
         password: formData.password,
         adminName: formData.adminName,
-        phone: formData.phone,
+        // Remove a formatação antes de enviar para a API
+        phone: formData.phone.replace(/\D/g, ''),
       });
       setSuccess(true);
     } catch (err: any) {
@@ -158,6 +182,7 @@ export default function RegisterPage() {
                 value={formData.phone}
                 onChange={handleChange}
                 placeholder="(11) 99999-9999"
+                maxLength={15}
                 className="w-full"
               />
             </div>
