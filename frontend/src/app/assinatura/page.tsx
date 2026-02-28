@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { subscriptionService, SubscriptionData } from '@/services/subscriptions';
 import { useSubscription } from '@/contexts/SubscriptionContext';
-import SubscriptionModal from '@/components/SubscriptionModal'; // <-- IMPORT DO SEU NOVO MODAL
+import SubscriptionModal from '@/components/SubscriptionModal';
 import {
   CreditCard,
   Check,
@@ -20,7 +20,7 @@ import {
 export default function SubscriptionPage() {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false); // Esse estado agora vai controlar o NOVO modal
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const { checkSubscription } = useSubscription();
 
   useEffect(() => {
@@ -38,8 +38,6 @@ export default function SubscriptionPage() {
     }
   }
 
-  // Removi a função handleUpgrade() daqui porque o PIX vai cuidar de ativar o plano depois
-
   async function handleRenew() {
     try {
       await subscriptionService.renew();
@@ -56,13 +54,6 @@ export default function SubscriptionPage() {
     return new Date(dateString).toLocaleDateString('pt-BR');
   }
 
-  function formatCurrency(value: number) {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  }
-
   if (isLoading) {
     return (
       <ProtectedRoute adminOnly>
@@ -76,6 +67,14 @@ export default function SubscriptionPage() {
   const isExpired = subscription?.isExpired;
   const isTrial = subscription?.status === 'TRIAL';
   const isEnterprise = subscription?.plan === 'ENTERPRISE';
+
+  // NOVO: Cálculo de quantos dias faltam para a assinatura vencer
+  const daysUntilExpiration = subscription?.endDate
+    ? Math.ceil((new Date(subscription.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+
+  // NOVO: Só é considerado perto de expirar se faltar 5 dias ou menos
+  const isCloseToExpiring = daysUntilExpiration !== null && daysUntilExpiration <= 5;
 
   return (
     <ProtectedRoute adminOnly>
@@ -137,6 +136,10 @@ export default function SubscriptionPage() {
                 <p className="text-xl font-semibold">
                   {formatDate(subscription.endDate)}
                 </p>
+                {/* Opcional: Mostra um aviso pequeno se estiver quase vencendo */}
+                {isCloseToExpiring && !isExpired && (
+                  <p className="text-sm text-fire-500 mt-1">Vence em {daysUntilExpiration} dias</p>
+                )}
               </div>
             )}
           </div>
@@ -189,7 +192,8 @@ export default function SubscriptionPage() {
             </button>
           )}
 
-          {isEnterprise && !isExpired && (
+          {/* NOVO: O botão de renovar agora SÓ aparece se estiver vencido ou faltando <= 5 dias */}
+          {isEnterprise && (isExpired || isCloseToExpiring) && (
             <button onClick={handleRenew} className="btn-secondary w-full">
               <Calendar size={18} />
               Renovar Assinatura
@@ -286,7 +290,6 @@ export default function SubscriptionPage() {
           </div>
         </div>
 
-        {/* NOVO MODAL DE ASSINATURA QUE CRIAMOS */}
         <SubscriptionModal 
           isOpen={showUpgradeModal} 
           onClose={() => setShowUpgradeModal(false)} 
