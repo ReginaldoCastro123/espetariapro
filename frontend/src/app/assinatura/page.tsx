@@ -69,8 +69,8 @@ export default function SubscriptionPage() {
       <div className="space-y-6">
         {/* Aviso de Assinatura Expirada */}
         {isExpired && (
-          <div className="bg-wine-500/20 border border-wine-500 rounded-xl p-6 flex items-center gap-4">
-            <div className="w-12 h-12 bg-wine-500 rounded-full flex items-center justify-center">
+          <div className="bg-wine-500/20 border border-wine-500 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="w-12 h-12 bg-wine-500 rounded-full flex items-center justify-center shrink-0">
               <AlertTriangle size={24} className="text-white" />
             </div>
             <div className="flex-1">
@@ -79,8 +79,7 @@ export default function SubscriptionPage() {
                 Sua assinatura expirou. Renove agora para continuar usando todas as funcionalidades.
               </p>
             </div>
-            {/* NOVO: Abre o Modal de Pagamento em vez de dar grátis */}
-            <button onClick={() => setShowUpgradeModal(true)} className="btn-primary">
+            <button onClick={() => setShowUpgradeModal(true)} className="btn-primary w-full sm:w-auto mt-4 sm:mt-0">
               Renovar Agora
               <ArrowRight size={18} />
             </button>
@@ -89,18 +88,19 @@ export default function SubscriptionPage() {
 
         {/* Card do Plano Atual */}
         <div className="card">
-          <div className="flex items-center justify-between mb-6">
+          {/* A MÁGICA ESTÁ AQUI: flex-col no celular, sm:flex-row no computador! */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-fire-500 rounded-xl flex items-center justify-center">
+              <div className="w-16 h-16 bg-fire-500 rounded-xl flex items-center justify-center shrink-0">
                 <CreditCard size={32} className="text-white" />
               </div>
               <div>
                 <p className="text-gray-400">Plano Atual</p>
-                <h2 className="text-2xl font-bold text-white">
+                <h2 className="text-2xl font-bold text-white leading-tight">
                   {isEnterprise ? 'Enterprise' : 'Free'}
                 </h2>
                 <span
-                  className={`text-sm ${
+                  className={`text-sm inline-block mt-1 ${
                     isExpired
                       ? 'text-wine-500'
                       : isTrial
@@ -120,7 +120,7 @@ export default function SubscriptionPage() {
             </div>
 
             {subscription?.endDate && (
-              <div className="text-right">
+              <div className="text-left sm:text-right w-full sm:w-auto mt-2 sm:mt-0 p-3 sm:p-0 bg-dark-700 sm:bg-transparent rounded-lg sm:rounded-none">
                 <p className="text-gray-400">Válido até</p>
                 <p className="text-xl font-semibold">
                   {formatDate(subscription.endDate)}
@@ -181,8 +181,6 @@ export default function SubscriptionPage() {
             </button>
           )}
 
-          {/* NOVO: O botão de renovar agora SÓ aparece se estiver vencido ou faltando <= 5 dias */}
-          {/* NOVO: Abre o Modal de Pagamento em vez de dar grátis */}
           {isEnterprise && (isExpired || isCloseToExpiring) && (
             <button onClick={() => setShowUpgradeModal(true)} className="btn-secondary w-full">
               <Calendar size={18} />
