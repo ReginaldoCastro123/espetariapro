@@ -12,17 +12,21 @@ import { requireAdmin } from '../../middlewares/roles';
 
 const router = Router();
 
-// 1. Rota PÚBLICA e ESPECÍFICA para o Webhook
+// 1. Rota PÚBLICA (Completamente isolada)
 router.post('/webhook', handleWebhook);
 
-// 2. Proteção para as rotas que precisam de login
-// Aplicamos o middleware apenas nas rotas que vêm abaixo
-router.use(authMiddleware);
+// 2. Roteador Protegido (Criamos um sub-roteador apenas para o que precisa de auth)
+const protectedRouter = Router();
+protectedRouter.use(authMiddleware);
 
-router.get('/', getSubscription);
-router.get('/limits', checkLimits);
-router.post('/create-pix', createPix);
-router.post('/upgrade', requireAdmin, upgradeToEnterprise);
-router.post('/renew', requireAdmin, renewSubscription);
+// Definimos as rotas protegidas no sub-roteador
+protectedRouter.get('/', getSubscription);
+protectedRouter.get('/limits', checkLimits);
+protectedRouter.post('/create-pix', createPix);
+protectedRouter.post('/upgrade', requireAdmin, upgradeToEnterprise);
+protectedRouter.post('/renew', requireAdmin, renewSubscription);
+
+// Montamos o sub-roteador no roteador principal
+router.use('/', protectedRouter);
 
 export default router;
