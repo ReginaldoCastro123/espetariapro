@@ -60,7 +60,7 @@ export const createPix = async (req: AuthRequest, res: Response): Promise<void> 
     const cleanDocument = document.replace(/\D/g, '');
 
     const body = {
-      transaction_amount: 0.01, // VALOR REAL DO PIX (Mude para o valor final em produção)
+      transaction_amount: 39.90, // VALOR REAL DO PIX (Mude para o valor final em produção)
       description: 'Assinatura EspetariaPro Enterprise',
       payment_method_id: 'pix',
       external_reference: companyId, // Identificador vital para o webhook
