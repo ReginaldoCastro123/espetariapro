@@ -60,10 +60,10 @@ export const createPix = async (req: AuthRequest, res: Response): Promise<void> 
     const cleanDocument = document.replace(/\D/g, '');
 
     const body = {
-      transaction_amount: 0.01,
+      transaction_amount: 0.01, // VALOR REAL DO PIX (Mude para o valor final em produção)
       description: 'Assinatura EspetariaPro Enterprise',
       payment_method_id: 'pix',
-      external_reference: companyId, // Identificador para o webhook
+      external_reference: companyId, // Identificador vital para o webhook
       payer: {
         email: req.user?.email || 'cliente@exemplo.com',
         first_name: name,
@@ -86,7 +86,7 @@ export const createPix = async (req: AuthRequest, res: Response): Promise<void> 
   }
 };
 
-// NOVO: Webhook para ativar o plano automaticamente
+// Webhook blindado que processa o pagamento e ativa o plano
 export const handleWebhook = async (req: Request, res: Response): Promise<void> => {
   try {
     const { data, action } = req.body;
@@ -101,7 +101,7 @@ export const handleWebhook = async (req: Request, res: Response): Promise<void> 
         
         if (companyId) {
           const startDate = new Date();
-          const endDate = addMonths(startDate, 1);
+          const endDate = addMonths(startDate, 1); // Dá 1 mês a partir do pagamento
           
           await prisma.subscription.create({
             data: { 
@@ -120,66 +120,6 @@ export const handleWebhook = async (req: Request, res: Response): Promise<void> 
   } catch (error) {
     console.error('Erro no Webhook:', error);
     res.status(500).send('Erro interno');
-  }
-};
-
-export const upgradeToEnterprise = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const companyId = req.user!.companyId;
-    const currentSubscription = await prisma.subscription.findFirst({
-      where: { companyId },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    if (currentSubscription?.plan === 'ENTERPRISE' && currentSubscription.status === 'ACTIVE') {
-      res.status(400).json({ error: 'Empresa já possui plano Enterprise ativo' });
-      return;
-    }
-
-    const startDate = new Date();
-    const endDate = addMonths(startDate, 1);
-
-    const subscription = await prisma.subscription.create({
-      data: { companyId, plan: 'ENTERPRISE', status: 'ACTIVE', startDate, endDate },
-    });
-
-    res.json({
-      message: 'Assinatura Enterprise ativada com sucesso',
-      subscription: { ...subscription, price: env.ENTERPRISE_PRICE },
-    });
-  } catch (error) {
-    console.error('Erro ao fazer upgrade:', error);
-    res.status(500).json({ error: 'Erro ao fazer upgrade da assinatura' });
-  }
-};
-
-export const renewSubscription = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const companyId = req.user!.companyId;
-    const currentSubscription = await prisma.subscription.findFirst({
-      where: { companyId },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    if (!currentSubscription || currentSubscription.plan !== 'ENTERPRISE') {
-      res.status(400).json({ error: 'Nenhuma assinatura Enterprise encontrada' });
-      return;
-    }
-
-    const startDate = new Date();
-    const endDate = addMonths(startDate, 1);
-
-    const subscription = await prisma.subscription.create({
-      data: { companyId, plan: 'ENTERPRISE', status: 'ACTIVE', startDate, endDate },
-    });
-
-    res.json({
-      message: 'Assinatura renovada com sucesso',
-      subscription: { ...subscription, price: env.ENTERPRISE_PRICE },
-    });
-  } catch (error) {
-    console.error('Erro ao renovar assinatura:', error);
-    res.status(500).json({ error: 'Erro ao renovar assinatura' });
   }
 };
 
