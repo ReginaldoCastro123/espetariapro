@@ -5,7 +5,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { orderService } from '@/services/orders';
 import { Order } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import Swal from 'sweetalert2'; // <-- Importação do SweetAlert2
+import Swal from 'sweetalert2';
 import {
   Search,
   ClipboardList,
@@ -168,9 +168,9 @@ export default function OrdersPage() {
   return (
     <ProtectedRoute>
       <div className="space-y-6">
-        {/* Header */}
+        {/* Header - Ajustado para quebrar no celular */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex gap-3 flex-1 max-w-lg">
+          <div className="flex flex-col sm:flex-row gap-3 flex-1 max-w-lg w-full">
             <div className="relative flex-1">
               <Search
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -187,7 +187,7 @@ export default function OrdersPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="min-w-[150px]"
+              className="w-full sm:w-auto min-w-[150px]"
             >
               <option value="">Todos status</option>
               <option value="OPEN">Abertos</option>
@@ -211,13 +211,15 @@ export default function OrdersPage() {
           <div className="space-y-4">
             {filteredOrders.map((order) => (
               <div key={order.id} className="card">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-dark-700 rounded-lg flex items-center justify-center">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  
+                  {/* Informações do Pedido */}
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-dark-700 rounded-lg flex-shrink-0 flex items-center justify-center hidden sm:flex">
                       <ClipboardList size={24} className="text-fire-500" />
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
+                    <div className="w-full">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
                         <h3 className="font-semibold text-white">
                           Pedido #{order.id.slice(0, 8)}
                         </h3>
@@ -229,7 +231,9 @@ export default function OrdersPage() {
                           {getStatusLabel(order.status)}
                         </span>
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
+                      
+                      {/* Flex-wrap adicionado aqui para a data não vazar */}
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-400 mt-2">
                         <span className="flex items-center gap-1">
                           <Table size={14} />
                           {order.table.name}
@@ -246,23 +250,28 @@ export default function OrdersPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-fire-500">
-                        {formatCurrency(Number(order.totalAmount))}
-                      </p>
-                      {order.paymentMethod && (
-                        <p className="text-sm text-gray-400 flex items-center justify-end gap-1">
-                          <CreditCard size={14} />
-                          {formatPaymentMethod(order.paymentMethod)}
+                  {/* Preço e Botões - Ajustado para alinhar direito no celular */}
+                  <div className="flex flex-col sm:flex-row lg:items-center gap-4 w-full lg:w-auto pt-4 lg:pt-0 border-t border-dark-700 lg:border-t-0 mt-2 lg:mt-0">
+                    <div className="flex justify-between items-center w-full sm:w-auto sm:text-right">
+                      <span className="sm:hidden text-gray-400 font-medium">Total:</span>
+                      <div>
+                        <p className="text-2xl font-bold text-fire-500">
+                          {formatCurrency(Number(order.totalAmount))}
                         </p>
-                      )}
+                        {order.paymentMethod && (
+                          <p className="text-sm text-gray-400 flex items-center justify-end gap-1">
+                            <CreditCard size={14} />
+                            {formatPaymentMethod(order.paymentMethod)}
+                          </p>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    {/* Botões empilhados ou lado a lado de forma fluída */}
+                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                       <button
                         onClick={() => setSelectedOrder(order)}
-                        className="btn-secondary"
+                        className="btn-secondary flex-1 sm:flex-none"
                       >
                         Ver
                       </button>
@@ -270,14 +279,15 @@ export default function OrdersPage() {
                         <>
                           <button
                             onClick={() => handleCloseOrder(order.id, 'CASH')}
-                            className="btn-success"
+                            className="btn-success flex-1 sm:flex-none"
                           >
                             Fechar
                           </button>
                           {isAdmin && (
                             <button
                               onClick={() => handleCancelOrder(order.id)}
-                              className="btn-danger px-3"
+                              className="btn-danger flex-1 sm:flex-none px-3 flex justify-center"
+                              title="Cancelar Pedido"
                             >
                               <X size={16} />
                             </button>
@@ -295,10 +305,10 @@ export default function OrdersPage() {
         {/* Order Detail Modal */}
         {selectedOrder && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-            <div className="card w-full max-w-2xl max-h-[90vh] overflow-auto animate-fadeIn">
-              <div className="flex items-center justify-between mb-6">
+            <div className="card w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-fadeIn">
+              <div className="flex items-start justify-between mb-6">
                 <div>
-                  <h2 className="text-xl font-semibold">
+                  <h2 className="text-xl font-semibold break-all">
                     Pedido #{selectedOrder.id.slice(0, 8)}
                   </h2>
                   <p className="text-sm text-gray-400">
@@ -307,14 +317,14 @@ export default function OrdersPage() {
                 </div>
                 <button
                   onClick={() => setSelectedOrder(null)}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-white flex-shrink-0 p-1"
                 >
                   <X size={24} />
                 </button>
               </div>
 
               <div className="space-y-4 mb-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-3 bg-dark-700 rounded-lg">
                     <p className="text-sm text-gray-400">Mesa</p>
                     <p className="font-semibold">{selectedOrder.table.name}</p>
@@ -333,7 +343,7 @@ export default function OrdersPage() {
                     {selectedOrder.orderItems.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between p-3 bg-dark-700 rounded-lg"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-dark-700 rounded-lg gap-2"
                       >
                         <div>
                           <p className="font-medium">{item.product.name}</p>
@@ -341,7 +351,7 @@ export default function OrdersPage() {
                             {item.quantity} x {formatCurrency(Number(item.price))}
                           </p>
                         </div>
-                        <p className="font-semibold text-fire-500">
+                        <p className="font-semibold text-fire-500 sm:text-right">
                           {formatCurrency(Number(item.price) * item.quantity)}
                         </p>
                       </div>
@@ -359,27 +369,28 @@ export default function OrdersPage() {
                 </div>
               </div>
 
+              {/* Botões do Modal empilhados no celular */}
               {selectedOrder.status === 'OPEN' && (
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={() => {
                       handleCloseOrder(selectedOrder.id, 'CASH');
                       setSelectedOrder(null);
                     }}
-                    className="btn-success flex-1"
+                    className="btn-success flex-1 flex justify-center items-center gap-2"
                   >
                     <DollarSign size={16} />
-                    Fechar (Dinheiro)
+                    <span>Dinheiro</span>
                   </button>
                   <button
                     onClick={() => {
                       handleCloseOrder(selectedOrder.id, 'CREDIT_CARD');
                       setSelectedOrder(null);
                     }}
-                    className="btn-primary flex-1"
+                    className="btn-primary flex-1 flex justify-center items-center gap-2"
                   >
                     <CreditCard size={16} />
-                    Fechar (Cartão)
+                    <span>Cartão</span>
                   </button>
                   {isAdmin && (
                     <button
@@ -387,7 +398,7 @@ export default function OrdersPage() {
                         handleCancelOrder(selectedOrder.id);
                         setSelectedOrder(null);
                       }}
-                      className="btn-danger px-4"
+                      className="btn-danger flex-1 sm:flex-none px-4"
                     >
                       Cancelar
                     </button>
