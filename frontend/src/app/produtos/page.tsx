@@ -5,6 +5,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { productService } from '@/services/products';
 import { Product } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import Swal from 'sweetalert2'; // <-- Importação do Modal Novo
 import {
   Plus,
   Search,
@@ -38,7 +39,8 @@ export default function ProductsPage() {
 
   async function loadProducts() {
     try {
-      const data = await productService.list();
+      // Aqui filtramos para trazer apenas os produtos ATIVOS (passando true)
+      const data = await productService.list(undefined, true);
       setProducts(data);
     } catch (error) {
       console.error('Erro ao carregar produtos:', error);
@@ -94,18 +96,58 @@ export default function ProductsPage() {
       loadProducts();
       loadCategories();
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Erro ao salvar produto');
+      Swal.fire({
+        title: 'Erro!',
+        text: error.response?.data?.error || 'Erro ao salvar produto',
+        icon: 'error',
+        background: '#18181b', // Fundo dark
+        color: '#fff',
+        confirmButtonColor: '#f97316' // Laranja
+      });
     }
   }
 
+  // Função atualizada com o Modal SweetAlert2
   async function handleDelete(id: string) {
-    if (!confirm('Tem certeza que deseja desativar este produto?')) return;
+    const result = await Swal.fire({
+      title: 'Tem certeza?',
+      text: "Deseja desativar este produto?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f97316', // Laranja do botão principal
+      cancelButtonColor: '#27272a', // Cinza escuro do botão cancelar
+      confirmButtonText: 'Sim, desativar!',
+      cancelButtonText: 'Cancelar',
+      background: '#18181b', // Fundo escuro combinando com o sistema
+      color: '#ffffff'
+    });
+
+    if (!result.isConfirmed) return;
 
     try {
       await productService.delete(id);
       loadProducts();
+      
+      // Feedback visual de sucesso (opcional, fica muito bom!)
+      Swal.fire({
+        title: 'Desativado!',
+        text: 'O produto foi desativado com sucesso e removido da lista.',
+        icon: 'success',
+        background: '#18181b',
+        color: '#ffffff',
+        confirmButtonColor: '#f97316',
+        timer: 2000, // Some sozinho depois de 2 segundos
+        showConfirmButton: false
+      });
     } catch (error) {
-      alert('Erro ao desativar produto');
+      Swal.fire({
+        title: 'Erro!',
+        text: 'Erro ao desativar produto.',
+        icon: 'error',
+        background: '#18181b',
+        color: '#ffffff',
+        confirmButtonColor: '#f97316'
+      });
     }
   }
 
@@ -228,7 +270,7 @@ export default function ProductsPage() {
           </div>
         )}
 
-        {/* Modal */}
+        {/* Modal Novo/Editar */}
         {showModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
             <div className="card w-full max-w-md animate-fadeIn">
