@@ -9,11 +9,13 @@ export const getStats = async (req: AuthRequest, res: Response): Promise<void> =
   try {
     const companyId = req.user!.companyId;
     
+    // Fuso horário de Rondônia (UTC-4)
     const timeZone = 'America/Porto_Velho';
     
     const now = new Date();
     const todayZoned = toZonedTime(now, timeZone);
 
+    // Ajuste para o horário de Rondônia (-04:00)
     const startOfTodayString = formatInTimeZone(now, timeZone, 'yyyy-MM-dd') + 'T00:00:00.000-04:00';
     const endOfTodayString = formatInTimeZone(now, timeZone, 'yyyy-MM-dd') + 'T23:59:59.999-04:00';
     
@@ -23,28 +25,38 @@ export const getStats = async (req: AuthRequest, res: Response): Promise<void> =
     const startOfCurrentMonth = startOfMonth(todayZoned);
     const endOfCurrentMonth = endOfMonth(todayZoned);
 
+    // Total vendido hoje
     const todaySales = await prisma.order.aggregate({
       where: {
         companyId,
         status: 'CLOSED',
-        closedAt: { gte: startOfToday, lte: endOfToday },
+        closedAt: {
+          gte: startOfToday,
+          lte: endOfToday,
+        },
       },
       _sum: { totalAmount: true },
     });
 
+    // Total vendido no mês
     const monthSales = await prisma.order.aggregate({
       where: {
         companyId,
         status: 'CLOSED',
-        closedAt: { gte: startOfCurrentMonth, lte: endOfCurrentMonth },
+        closedAt: {
+          gte: startOfCurrentMonth,
+          lte: endOfCurrentMonth,
+        },
       },
       _sum: { totalAmount: true },
     });
 
+    // Mesas abertas
     const openTables = await prisma.table.count({
       where: { companyId, status: 'OPEN' },
     });
 
+    // Produto mais vendido
     const topProduct = await prisma.orderItem.groupBy({
       by: ['productId'],
       where: { order: { companyId, status: 'CLOSED' } },
@@ -67,6 +79,7 @@ export const getStats = async (req: AuthRequest, res: Response): Promise<void> =
       }
     }
 
+    // Forma de pagamento mais usada
     const paymentMethods = await prisma.order.groupBy({
       by: ['paymentMethod'],
       where: { companyId, status: 'CLOSED', paymentMethod: { not: null } },
@@ -75,6 +88,7 @@ export const getStats = async (req: AuthRequest, res: Response): Promise<void> =
       take: 1,
     });
 
+    // Vendas por dia (últimos 7 dias) corrigido para UTC-4
     const salesByDay = [];
     for (let i = 6; i >= 0; i--) {
       const date = subDays(todayZoned, i);
@@ -89,7 +103,10 @@ export const getStats = async (req: AuthRequest, res: Response): Promise<void> =
         where: {
           companyId,
           status: 'CLOSED',
-          closedAt: { gte: dayStart, lte: dayEnd },
+          closedAt: {
+            gte: dayStart,
+            lte: dayEnd,
+          },
         },
         _sum: { totalAmount: true },
         _count: { id: true },
@@ -103,6 +120,7 @@ export const getStats = async (req: AuthRequest, res: Response): Promise<void> =
       });
     }
 
+    // Produtos mais vendidos (top 5)
     const topProducts = await prisma.orderItem.groupBy({
       by: ['productId'],
       where: { order: { companyId, status: 'CLOSED' } },
@@ -123,6 +141,7 @@ export const getStats = async (req: AuthRequest, res: Response): Promise<void> =
     );
     const topProductsData = topProductsDataRaw.filter(Boolean);
 
+    // Vendas por forma de pagamento
     const salesByPayment = await prisma.order.groupBy({
       by: ['paymentMethod'],
       where: { companyId, status: 'CLOSED', paymentMethod: { not: null } },
@@ -136,6 +155,7 @@ export const getStats = async (req: AuthRequest, res: Response): Promise<void> =
       count: item._count.id,
     }));
 
+    // Informações da assinatura
     const subscription = await prisma.subscription.findFirst({
       where: { companyId },
       orderBy: { createdAt: 'desc' },
@@ -162,5 +182,54 @@ export const getStats = async (req: AuthRequest, res: Response): Promise<void> =
   } catch (error) {
     console.error('Erro ao buscar estatísticas:', error);
     res.status(500).json({ error: 'Erro ao buscar estatísticas' });
+  }
+};
+
+export const getSalesByWaiter = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const companyId = req.user!.companyId;
+    const { startDate, endDate } = req.query;
+
+    const where: any = {
+      companyId,
+      status: 'CLOSED',
+    };
+
+    if (startDate || endDate) {
+      where.closedAt = {};
+      if (startDate) where.closedAt.gte = new Date(startDate as string);
+      if (endDate) where.closedAt.lte = new Date(endDate as string);
+    }
+
+    const salesByWaiter = await prisma.order.groupBy({
+      by: ['waiterId'],
+      where,
+      _sum: {
+        totalAmount: true,
+      },
+      _count: {
+        id: true,
+      },
+    });
+
+    const resultRaw = await Promise.all(
+      salesByWaiter.map(async (item) => {
+        if (!item.waiterId) return null;
+        const waiter = await prisma.user.findUnique({
+          where: { id: item.waiterId },
+          select: { id: true, name: true },
+        });
+        return waiter ? {
+          waiter,
+          totalSales: Number(item._sum.totalAmount) || 0,
+          orderCount: item._count.id,
+        } : null;
+      })
+    );
+
+    res.json(resultRaw.filter(Boolean));
+  } catch (error) {
+    console.error('Erro ao buscar vendas por garçom:', error);
+    res.status(500).json({ error: 'Erro ao buscar vendas por garçom' });
   }
 };
