@@ -5,6 +5,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { orderService } from '@/services/orders';
 import { Order } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import Swal from 'sweetalert2'; // <-- Importação do SweetAlert2
 import {
   Search,
   ClipboardList,
@@ -44,19 +45,67 @@ export default function OrdersPage() {
     try {
       await orderService.close(id, paymentMethod);
       loadOrders();
+      Swal.fire({
+        title: 'Fechado!',
+        text: 'Pedido encerrado com sucesso.',
+        icon: 'success',
+        background: '#18181b',
+        color: '#ffffff',
+        confirmButtonColor: '#f97316',
+        timer: 2000,
+        showConfirmButton: false
+      });
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Erro ao fechar pedido');
+      Swal.fire({
+        title: 'Erro!',
+        text: error.response?.data?.error || 'Erro ao fechar pedido',
+        icon: 'error',
+        background: '#18181b',
+        color: '#ffffff',
+        confirmButtonColor: '#f97316'
+      });
     }
   }
 
   async function handleCancelOrder(id: string) {
-    if (!confirm('Tem certeza que deseja cancelar este pedido?')) return;
+    const result = await Swal.fire({
+      title: 'Tem certeza?',
+      text: "Deseja realmente cancelar este pedido?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f97316',
+      cancelButtonColor: '#27272a',
+      confirmButtonText: 'Sim, cancelar!',
+      cancelButtonText: 'Voltar',
+      background: '#18181b',
+      color: '#ffffff'
+    });
+
+    if (!result.isConfirmed) return;
 
     try {
       await orderService.cancel(id);
       loadOrders();
+      
+      Swal.fire({
+        title: 'Cancelado!',
+        text: 'O pedido foi cancelado com sucesso.',
+        icon: 'success',
+        background: '#18181b',
+        color: '#ffffff',
+        confirmButtonColor: '#f97316',
+        timer: 2000,
+        showConfirmButton: false
+      });
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Erro ao cancelar pedido');
+      Swal.fire({
+        title: 'Erro!',
+        text: error.response?.data?.error || 'Erro ao cancelar pedido',
+        icon: 'error',
+        background: '#18181b',
+        color: '#ffffff',
+        confirmButtonColor: '#f97316'
+      });
     }
   }
 
