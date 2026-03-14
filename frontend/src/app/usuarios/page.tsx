@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { userService } from '@/services/users';
 import { User } from '@/types';
+import Swal from 'sweetalert2'; // <-- Importando o SweetAlert2
 import {
   Plus,
   Search,
@@ -89,19 +90,69 @@ export default function UsersPage() {
 
       setShowModal(false);
       loadUsers();
+      
+      Swal.fire({
+        title: 'Sucesso!',
+        text: editingUser ? 'Usuário atualizado.' : 'Usuário criado.',
+        icon: 'success',
+        background: '#18181b',
+        color: '#ffffff',
+        confirmButtonColor: '#f97316',
+        timer: 1500,
+        showConfirmButton: false
+      });
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Erro ao salvar usuário');
+      Swal.fire({
+        title: 'Erro!',
+        text: error.response?.data?.error || 'Erro ao salvar usuário',
+        icon: 'error',
+        background: '#18181b',
+        color: '#ffffff',
+        confirmButtonColor: '#f97316'
+      });
     }
   }
 
+  // Função de Excluir atualizada com SweetAlert2
   async function handleDelete(id: string) {
-    if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
+    const result = await Swal.fire({
+      title: 'Tem certeza?',
+      text: "Deseja excluir este usuário?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f97316',
+      cancelButtonColor: '#27272a',
+      confirmButtonText: 'Sim, excluir!',
+      cancelButtonText: 'Cancelar',
+      background: '#18181b',
+      color: '#ffffff'
+    });
+
+    if (!result.isConfirmed) return;
 
     try {
       await userService.delete(id);
       loadUsers();
+      
+      Swal.fire({
+        title: 'Excluído!',
+        text: 'O usuário foi removido com sucesso.',
+        icon: 'success',
+        background: '#18181b',
+        color: '#ffffff',
+        confirmButtonColor: '#f97316',
+        timer: 1500,
+        showConfirmButton: false
+      });
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Erro ao excluir usuário');
+      Swal.fire({
+        title: 'Erro!',
+        text: error.response?.data?.error || 'Erro ao excluir usuário',
+        icon: 'error',
+        background: '#18181b',
+        color: '#ffffff',
+        confirmButtonColor: '#f97316'
+      });
     }
   }
 
@@ -114,9 +165,26 @@ export default function UsersPage() {
       setShowResetModal(false);
       setSelectedUser(null);
       setNewPassword('');
-      alert('Senha redefinida com sucesso!');
+      
+      Swal.fire({
+        title: 'Sucesso!',
+        text: 'Senha redefinida com sucesso!',
+        icon: 'success',
+        background: '#18181b',
+        color: '#ffffff',
+        confirmButtonColor: '#f97316',
+        timer: 2000,
+        showConfirmButton: false
+      });
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Erro ao redefinir senha');
+      Swal.fire({
+        title: 'Erro!',
+        text: error.response?.data?.error || 'Erro ao redefinir senha',
+        icon: 'error',
+        background: '#18181b',
+        color: '#ffffff',
+        confirmButtonColor: '#f97316'
+      });
     }
   }
 
