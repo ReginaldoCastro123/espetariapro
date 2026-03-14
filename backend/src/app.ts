@@ -45,6 +45,10 @@ app.get('/health', (req, res) => {
     environment: env.NODE_ENV 
   });
 });
+// Ping
+app.get('/api/ping', (req, res) => {
+  res.status(200).json({ status: 'alive' });
+});
 
 // API Routes
 app.use('/api/auth', authRoutes);
